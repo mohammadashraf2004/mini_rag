@@ -35,7 +35,7 @@ async def upload_data(project_id: str,file : UploadFile,
             while chunk := await file.read(settings.FILE_DEFAULT_CHUNK_SIZE):  # Read the file in chunks
                 await out_file.write(chunk) 
     except Exception as e:
-        
+
         logger.error(f"Error saving file: {e}")
 
         return JsonResponse.JSONResponse(content=ResponseSignal.FILE_UPLOAD_FAILED.value,
@@ -43,6 +43,7 @@ async def upload_data(project_id: str,file : UploadFile,
 
     
 
-    return JsonResponse.JSONResponse(content=ResponseSignal.FILE_UPLOAD_SUCCESS.value,
+    return JsonResponse.JSONResponse(content={"message": ResponseSignal.FILE_UPLOAD_SUCCESS.value,
+                                              "file_path": file_path},
                                       status_code=status.HTTP_200_OK) 
 

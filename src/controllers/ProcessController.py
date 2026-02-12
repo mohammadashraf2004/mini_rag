@@ -3,6 +3,7 @@ import os
 from .Project_Controller import ProjectController
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_community.document_loaders import TextLoader
+from langchain_community.document_loaders import Docx2txtLoader as docx_loader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from models import ProcessingEnums
 
@@ -14,8 +15,8 @@ class ProcessController(BaseController):
         self.project_id = project_id
         self.project_path = ProjectController().get_project_path(project_id=project_id)
         
-    def get_file_extension(self, file_name: str):
-        return os.path.splitext(file_name)[-1]
+    def get_file_extension(self, file_id: str):
+        return os.path.splitext(file_id)[-1].lower()
     
     def get_file_loader(self, file_id: str):
 
@@ -26,28 +27,42 @@ class ProcessController(BaseController):
             return TextLoader(file_path , encoding='utf-8')
         elif file_extension == ProcessingEnums.PDF.value:
             return PyMuPDFLoader(file_path=file_path)
+        elif file_extension == ProcessingEnums.DOCX.value:
+            return docx_loader.DocxLoader(file_path=file_path)
         return None
         
     def get_file_content(self, file_id: str):
+
         loader = self.get_file_loader(file_id=file_id)
         if loader is None:
             raise ValueError(f"Unsupported file type for file: {file_id}")
         return loader.load()
     
-    def process_file_content(self, file_content: list,file_id : str, chunk_size: int = 100,
-                              overlap_size: int = 20):
+    def process_file_content(self, file_content: list, file_id: str,
+                            chunk_size: int=100, overlap_size: int=20):
 
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size,
-                                                        chunk_overlap=overlap_size,
-                                                        length_function=len)
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=overlap_size,
+            length_function=len,
+        )
 
-        file_content_text = [
-            rec.page_content for rec in chunks
+        file_content_texts = [
+            rec.page_content
+            for rec in file_content
         ]
 
         file_content_metadata = [
-            rec.metadata for rec in chunks
+            rec.metadata
+            for rec in file_content
         ]
-        chunks = text_splitter.create_documents(file_content_text,
-                                                 metadatas=file_content_metadata)
+
+        chunks = text_splitter.create_documents(
+            file_content_texts,
+            metadatas=file_content_metadata
+        )
+
         return chunks
+
+
+    

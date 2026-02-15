@@ -21,7 +21,7 @@ class OpenAIProvider(LLMInterface):
         self.embedding_size = None
 
         self.default_input_max_characters = default_input_max_characters
-        self.default_generation_max_outputs = default_generation_max_output_tokens
+        self.default_generation_max_output_tokens = default_generation_max_output_tokens
         self.default_generation_temperature = default_generation_temperature
 
         self.logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class OpenAIProvider(LLMInterface):
         if not self.generation_model:
             self.logger.error("Generation model not set. Using default model.")
 
-        max_output_tokens = max_output_tokens or self.default_generation_max_output_tokens
+        max_output_tokens = max_output_tokens if max_output_tokens is not None else self.default_generation_max_output_tokens
         temperature = temperature if temperature is not None else self.default_generation_temperature
 
         chat_history.append(self.construct_prompt(prompt = prompt,

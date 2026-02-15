@@ -138,8 +138,8 @@ class QdrantDBProvider(VectorDBInterface):
         
         return [ 
             RetrievalDocument(**{
-                "Score": result.score,
-                "Text": result.payload("text"),
+                "score": result.score,
+                "text": result.payload.get("text"),
             })
             for result in results
         ]

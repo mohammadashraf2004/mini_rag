@@ -6,10 +6,10 @@ import json
 
 
 class NLPController(BaseController):
-    def __init__(self, vector_db_client, generation_client, embedding_client,template_parser):
+    def __init__(self, vectordb_client, generation_client, embedding_client,template_parser):
         super().__init__()
 
-        self.vector_db_client = vector_db_client
+        self.vectordb_client = vectordb_client
         self.generation_client = generation_client
         self.embedding_client = embedding_client
         self.template_parser = template_parser
@@ -19,11 +19,11 @@ class NLPController(BaseController):
     
     def reset_vector_db_collection(self, project : Project):
         collection_name = self.create_collection_name(project.project_id)
-        return self.vector_db_client.delete_collection(collection_name)
+        return self.vectordb_client.delete_collection(collection_name)
     
     def get_vector_db_collection_info(self, project : Project):
         collection_name = self.create_collection_name(project.project_id)
-        collection_info = self.vector_db_client.get_collection_info(collection_name = collection_name)
+        collection_info = self.vectordb_client.get_collection_info(collection_name = collection_name)
 
         return json.loads(
             json.dumps(collection_info,default=lambda x: x.__dict__))
@@ -33,27 +33,25 @@ class NLPController(BaseController):
                             do_reset = False):
         collection_name = self.create_collection_name(project.project_id)
         
-        texts = [chunk.text for chunk in chunks]
-        metadatas = [chunk.metadata for chunk in chunks]
+        texts = [chunk.chunk_text for chunk in chunks]
+        metadatas = [chunk.chunk_metadata for chunk in chunks]
 
         vectors = [
             self.embedding_client.embed_text(text=text, 
-                                             document = DocumentTypeEnum.DOCUMENT) 
+                                             document_type = DocumentTypeEnum.DOCUMENT) 
             for text in texts
         ]
 
         #CRETE COLLECTION IF NOT EXISTS
-        _ = self.vector_db_client.create_collection(collection_name = collection_name,
-                                                    texts = texts,
-                                                    metadatas = metadatas,
-                                                    vectors = vectors
+        _ = self.vectordb_client.create_collection(collection_name = collection_name,
+                                                    embedding_size=self.embedding_client.embedding_size
                                                     , do_reset = do_reset
                                                     )
         
         #insert INTO database
-        _ = self.vector_db_client.insert_many(collection_name = collection_name,
+        _ = self.vectordb_client.insert_many(collection_name = collection_name,
                                         texts = texts,
-                                        metadatas = metadatas,
+                                        metadata = metadatas,
                                         vectors = vectors,
                                         record_ids = chunks_ids)
         
@@ -108,7 +106,9 @@ class NLPController(BaseController):
             for idx, doc in enumerate(retrieved_documents)
         ])
 
-        footer_prompt = self.template_parser.get("rag", "footer_prompt")
+        footer_prompt = self.template_parser.get("rag", "footer_prompt" , {
+            "query": query
+        })
 
         # step3: Construct Generation Client Prompts
         chat_history = [
@@ -121,7 +121,7 @@ class NLPController(BaseController):
         full_prompt = "\n\n".join([ documents_prompts,  footer_prompt])
 
         # step4: Retrieve the Answer
-        answer = self.generation_client.generate_text(
+        answer = self.generation_client.generate_response(
             prompt=full_prompt,
             chat_history=chat_history
         )

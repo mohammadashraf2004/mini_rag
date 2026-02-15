@@ -37,7 +37,7 @@ class CoHereProvider(LLMInterface):
     def process_text(self, text: str):
         return text[:self.default_input_max_characters].strip()
 
-    def generate_text(self, prompt: str, chat_history: list=[], max_output_tokens: int=None,
+    def generate_response(self, prompt: str, chat_history: list=[], max_output_tokens: int=None,
                             temperature: float = None):
 
         if not self.client:

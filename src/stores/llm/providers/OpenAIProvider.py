@@ -7,20 +7,21 @@ class OpenAIProvider(LLMInterface):
 
     def __init__(self, api_key: str,api_url: str = None,
                  default_input_max_characters: int = 1000,
-                   default_generation_max_outputs: int = 1000,
+                   default_generation_max_output_tokens: int = 1000,
                    default_generation_temperature: float = 0.1):
         
-        self.client = OpenAI(api_key=self.api_key,
-                            base_url=self.api_url if api_url and len(api_url.strip()) else None)
-
         self.api_key = api_key
         self.api_url = api_url
+
+        self.client = OpenAI(api_key=self.api_key,
+                            base_url=self.api_url if api_url and len(api_url.strip()) else None)
+        
         self.generation_model = None
         self.embedding_model = None
         self.embedding_size = None
 
         self.default_input_max_characters = default_input_max_characters
-        self.default_generation_max_outputs = default_generation_max_outputs
+        self.default_generation_max_outputs = default_generation_max_output_tokens
         self.default_generation_temperature = default_generation_temperature
 
         self.logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class OpenAIProvider(LLMInterface):
         if not self.generation_model:
             self.logger.error("Generation model not set. Using default model.")
 
-        max_output_tokens = max_output_tokens or self.default_generation_max_outputs
+        max_output_tokens = max_output_tokens or self.default_generation_max_output_tokens
         temperature = temperature if temperature is not None else self.default_generation_temperature
 
         chat_history.append(self.construct_prompt(prompt = prompt,

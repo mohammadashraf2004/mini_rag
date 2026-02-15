@@ -2,6 +2,7 @@ from .BaseController import BaseController
 from models.db_schemas import Project , DataChunk
 from stores.llm.LLMEnums import DocumentTypeEnum
 from typing import List
+import json
 
 class NLPController(BaseController):
     def __init__(self, vector_db_client, generation_client, embedding_client):
@@ -22,9 +23,11 @@ class NLPController(BaseController):
         collection_name = self.create_collection_name(project.project_id)
         collection_info = self.vector_db_client.get_collection_info(collection_name = collection_name)
 
-        return collection_info
+        return json.loads(
+            json.dumps(collection_info,default=lambda x: x.__dict__))
     
     def index_into_vector_db(self, project : Project, chunks : List[DataChunk],
+                             chunks_ids : List[int],
                             do_reset = False):
         collection_name = self.create_collection_name(project.project_id)
         
@@ -41,12 +44,87 @@ class NLPController(BaseController):
         _ = self.vector_db_client.create_collection(collection_name = collection_name,
                                                     texts = texts,
                                                     metadatas = metadatas,
-                                                    vectors = vectors)
+                                                    vectors = vectors
+                                                    , do_reset = do_reset
+                                                    )
         
         #insert INTO database
         _ = self.vector_db_client.insert_many(collection_name = collection_name,
                                         texts = texts,
                                         metadatas = metadatas,
-                                        vectors = vectors)
+                                        vectors = vectors,
+                                        record_ids = chunks_ids)
         
-        pass
+        return True
+    
+    def search_vector_db_collection(self, project: Project, text: str, limit: int = 10):
+
+        # step1: get collection name
+        collection_name = self.create_collection_name(project_id=project.project_id)
+
+        # step2: get text embedding vector
+        vector = self.embedding_client.embed_text(text=text, 
+                                                 document_type=DocumentTypeEnum.QUERY.value)
+
+        if not vector or len(vector) == 0:
+            return False
+
+        # step3: do semantic search
+        results = self.vectordb_client.search_by_vector(
+            collection_name=collection_name,
+            vector=vector,
+            limit=limit
+        )
+
+        if not results:
+            return False
+        
+        return json.loads(
+            json.dumps(results,default=lambda x: x.__dict__))
+
+        return results
+    
+    def answer_rag_question(self, project: Project, query: str, limit: int = 10):
+        
+        answer, full_prompt, chat_history = None, None, None
+
+        # step1: retrieve related documents
+        retrieved_documents = self.search_vector_db_collection(
+            project=project,
+            text=query,
+            limit=limit,
+        )
+
+        if not retrieved_documents or len(retrieved_documents) == 0:
+            return answer, full_prompt, chat_history
+        
+        # step2: Construct LLM prompt
+        system_prompt = self.template_parser.get("rag", "system_prompt")
+
+        documents_prompts = "\n".join([
+            self.template_parser.get("rag", "document_prompt", {
+                    "doc_num": idx + 1,
+                    "chunk_text": doc.text,
+            })
+            for idx, doc in enumerate(retrieved_documents)
+        ])
+
+        footer_prompt = self.template_parser.get("rag", "footer_prompt")
+
+        # step3: Construct Generation Client Prompts
+        chat_history = [
+            self.generation_client.construct_prompt(
+                prompt=system_prompt,
+                role=self.generation_client.enums.SYSTEM.value,
+            )
+        ]
+
+        full_prompt = "\n\n".join([ documents_prompts,  footer_prompt])
+
+        # step4: Retrieve the Answer
+        answer = self.generation_client.generate_text(
+            prompt=full_prompt,
+            chat_history=chat_history
+        )
+
+        return answer, full_prompt, chat_history

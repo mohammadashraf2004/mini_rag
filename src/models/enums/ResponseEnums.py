@@ -11,3 +11,6 @@ class ResponseSignal(Enum):
     PROCESSING_FAILED = "processing_failed"
     NO_FILES_TO_PROCESS = "no_files_to_process"
     FILE_NOT_FOUND = "file_not_found"
+    PROJECT_NOT_FOUND = "project_not_found"
+    INSERT_INTO_VECTORDB_ERROR = "insert_into_vectordb_error"
+    INSERT_INTO_VECTORDB_SUCCESS = "insert_into_vectordb_success"

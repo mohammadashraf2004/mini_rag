@@ -11,7 +11,7 @@ class OpenAIProvider(LLMInterface):
                    default_generation_temperature: float = 0.1):
         
         self.client = OpenAI(api_key=self.api_key,
-                            base_url=self.api_url)
+                            base_url=self.api_url if api_url and len(api_url.strip()) else None)
 
         self.api_key = api_key
         self.api_url = api_url
@@ -23,8 +23,9 @@ class OpenAIProvider(LLMInterface):
         self.default_generation_max_outputs = default_generation_max_outputs
         self.default_generation_temperature = default_generation_temperature
 
-
         self.logger = logging.getLogger(__name__)
+
+        self.enums = OpenAIEnums
 
     def set_generation_model(self, model_id: str):
         self.generation_model = model_id

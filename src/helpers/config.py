@@ -28,6 +28,12 @@ class Settings(BaseSettings):
         GENERATION_DEFAULT_MAX_TOKENS: int = None
         GENERATION_DEFAULT_TEMPERATURE: float = None
 
+        POSTGRES_USERNAME: str
+        POSTGRES_PASSWORD: str
+        POSTGRES_HOST: str
+        POSTGRES_PORT: int
+        POSTGRES_MAIN_DATABASE: str
+
         VECTOR_DB_BACKEND : str
         VECTOR_DB_PATH : str
         VECTOR_DB_DISTANCE_METHOD: str = None

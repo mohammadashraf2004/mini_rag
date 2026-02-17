@@ -26,7 +26,7 @@ data_router = APIRouter(
 @data_router.post("/upload/{project_id}")
 
 
-async def upload_data(request: Request, project_id: str, file: UploadFile,
+async def upload_data(request: Request, project_id: int, file: UploadFile,
                       app_settings: Settings = Depends(get_settings)):
         
     
@@ -73,7 +73,7 @@ async def upload_data(request: Request, project_id: str, file: UploadFile,
         )
     asset_model = await AssetModel.create_instances(db_client=request.app.state.db_client)
     asset_resource = asset.Asset(
-            asset_project_id=project.id,
+            asset_project_id=project.project_id,
             asset_type=AssetTypeEnum.FILE.value,
             asset_name=file_id,
             asset_size=os.path.getsize(file_path)
@@ -83,14 +83,14 @@ async def upload_data(request: Request, project_id: str, file: UploadFile,
     return JsonResponse.JSONResponse(
             content={
                 "signal": ResponseSignal.FILE_UPLOAD_SUCCESS.value,
-                "file_id": str(asset_record.id),
-                "project_id": str(project.id)
+                "file_id": str(asset_record.asset_id),
+                "project_id": str(project.project_id)
             }
         )
 
 
 @data_router.post("/process/{project_id}")
-async def process_file(project_id: str, process_request: ProcessFileRequest , request: Request):
+async def process_file(project_id: int, process_request: ProcessFileRequest , request: Request):
     
     chunk_size = process_request.chunk_size
     overlap_size = process_request.overlap_size
@@ -111,21 +111,21 @@ async def process_file(project_id: str, process_request: ProcessFileRequest , re
 
     if process_request.file_id is not None:
         asset_record = await asset_model.get_asset_record(
-            asset_project_id=project.id,
+            asset_project_id=project.project_id,
             asset_name=process_request.file_id
         )
         if asset_record is None:
             return JsonResponse.JSONResponse(content=ResponseSignal.FILE_NOT_FOUND.value,
                                               status_code=status.HTTP_400_BAD_REQUEST)
         
-        project_files_ids = {asset_record.id : asset_record.asset_name}
+        project_files_ids = {asset_record.asset_id : asset_record.asset_name}
     else:
         asset_model = await AssetModel.create_instances(db_client=request.app.state.db_client)
         project_files = await asset_model.get_all_project_assets(
-            asset_project_id=project.id,
+            asset_project_id=project.project_id,
             asset_type=AssetTypeEnum.FILE.value
         )
-        project_files_ids = {record.id : record.asset_name for record in project_files}
+        project_files_ids = {record.asset_id : record.asset_name for record in project_files}
 
     if len(project_files_ids) == 0:
         return JsonResponse.JSONResponse(content=ResponseSignal.NO_FILES_TO_PROCESS.value,
@@ -136,7 +136,7 @@ async def process_file(project_id: str, process_request: ProcessFileRequest , re
 
     if do_reset == 1:
             _ = await chunk_model.delete_chunks_by_project_id(
-                project_id=project.id
+                project_id=project.project_id
             )
 
     for asset_id,file_id in project_files_ids.items():
@@ -161,7 +161,7 @@ async def process_file(project_id: str, process_request: ProcessFileRequest , re
                 chunk_text=chunk.page_content,
                 chunk_metadata=chunk.metadata,
                 chunk_order=i+1,
-                chunk_project_id=project.id,
+                chunk_project_id=project.project_idid,
                 chunk_asset_id=asset_id
             )
             for i, chunk in enumerate(file_chunks)

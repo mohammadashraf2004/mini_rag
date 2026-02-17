@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from typing import Optional, List
 
 class Settings(BaseSettings):
 
@@ -11,9 +11,6 @@ class Settings(BaseSettings):
         FILE_MAX_SIZE: int
         FILE_DEFAULT_CHUNK_SIZE: int
 
-        MONGO_URI: str
-        MONGO_DB_NAME: str
-
         GENERATION_BACKEND: str
         EMBEDDING_BACKEND: str
 
@@ -21,6 +18,7 @@ class Settings(BaseSettings):
         OPENAI_API_URL: str = None
         COHERE_API_KEY: Optional[str] = None
 
+        GENERATION_MODEL_ID_LITERAL: List[str] = None
         GENERATION_MODEL_ID: str = None
         EMBEDDING_MODEL_ID: str = None
         EMBEDDING_MODEL_SIZE: int = None
@@ -34,9 +32,12 @@ class Settings(BaseSettings):
         POSTGRES_PORT: int
         POSTGRES_MAIN_DATABASE: str
 
+
+        VECTOR_DB_BACKEND_LITERAL: List[str] = None
         VECTOR_DB_BACKEND : str
         VECTOR_DB_PATH : str
         VECTOR_DB_DISTANCE_METHOD: str = None
+        VECTOR_DB_PGVEC_INDEX_THRESHOLD: int = 100
 
         PRIMARY_LANG: str
         DEFAULT_LANG: str

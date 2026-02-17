@@ -1,17 +1,16 @@
 from fastapi import APIRouter , FastAPI, Depends , UploadFile,status,Request
 import os
 from helpers.config import get_settings, Settings
-from controllers import DataController , ProjectController,ProcessController
+from controllers import DataController , ProjectController,ProcessController,NLPController
 import fastapi.responses as JsonResponse
 import aiofiles
 from models import ResponseSignal,ProjectModel
 import logging
-from models.db_schemas import project
-from models.db_schemas.project import Project
+from models.db_schemas import Project,Asset
 from routes.schemas.data import ProcessFileRequest
 from models.ProjectModel import ProjectModel
 from models.ChunkModel import ChunkModel
-from models.db_schemas import DataChunk,asset
+from models.db_schemas import DataChunk
 from models.AssetModel import AssetModel
 from models.enums.AssetTypeEnum import AssetTypeEnum
 
@@ -103,6 +102,14 @@ async def process_file(project_id: int, process_request: ProcessFileRequest , re
 
     process_controller = ProcessController(project_id=project_id)
 
+    nlp_controller = NLPController(
+        vectordb_client=request.app.state.vectordb_client
+        ,generation_client=request.app.state.generation_client,
+        embedding_client=request.app.state.embedding_client,
+        template_parser=request.app.state.template_parser
+    )
+    
+
     asset_model = await AssetModel.create_instances(db_client=request.app.state.db_client)
 
     chunk_model = await ChunkModel.create_instances(db_client=request.app.state.db_client)
@@ -135,6 +142,10 @@ async def process_file(project_id: int, process_request: ProcessFileRequest , re
     no_processed_files = 0
 
     if do_reset == 1:
+            
+            collection_name = nlp_controller.create_collection_name(project_id=project.project_id)
+            _ = await request.app.state.vectordb_client.delete_collection(collection_name=collection_name)
+
             _ = await chunk_model.delete_chunks_by_project_id(
                 project_id=project.project_id
             )
